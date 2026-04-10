@@ -15,6 +15,8 @@ import {
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder'
 import { supabase } from '@/lib/supabase'
 import type { Phase, User, Transfer } from '@/types'
+import SupportBot from '@/components/SupportBot'
+import { Mic, Pause } from 'lucide-react'
 
 const phaseConfig: Record<Phase, { label: string; variant: 'secondary' | 'destructive' | 'default' | 'outline' }> = {
   idle:      { label: 'Hold mic to speak', variant: 'secondary'   },
@@ -153,15 +155,15 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-muted flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="flex-row items-center gap-3 pb-4">
-          <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
-            <span className="text-white text-xs font-bold">IC</span>
+    <main className="min-h-screen bg-gradient-to-br from-background to-muted dark:from-background dark:to-muted flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-2xl border-0 pt-0">
+        <CardHeader className="flex flex-row items-center gap-3 py-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
+          <div className="w-10 h-10 bg-primary-foreground bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur">
+            <span className="text-primary text-sm font-bold">IC</span>
           </div>
           <div>
-            <p className="font-semibold text-sm">ICICI Bank</p>
-            <p className="text-xs text-muted-foreground">Voice assistant</p>
+            <p className="font-bold text-sm">ICICI Bank</p>
+            <p className="text-xs text-primary-foreground/80">AI Voice Assistant</p>
           </div>
           <div className="ml-auto">
             <Select
@@ -177,7 +179,7 @@ export default function Home() {
                 }
               }}
             >
-              <SelectTrigger className="w-36 h-8 text-xs">
+              <SelectTrigger className="w-32 h-8 text-xs bg-primary-foreground bg-opacity-20 text-primary-foreground border-primary-foreground border-opacity-30 hover:bg-opacity-30">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -191,74 +193,77 @@ export default function Home() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-2">
           {/* User balance card */}
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-            <Avatar>
-              <AvatarFallback>{activeUser.initials}</AvatarFallback>
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-secondary/10 to-secondary/5 dark:from-secondary/20 dark:to-secondary/10 border border-secondary/30 dark:border-secondary/50 shadow-sm">
+            <Avatar className="w-12 h-12">
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold">{activeUser.initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{activeUser.name}</p>
+              <p className="font-semibold text-sm text-foreground">{activeUser.name}</p>
               <p className="text-xs text-muted-foreground">{activeUser.account_no}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Balance</p>
-              <p className="font-semibold text-sm">
+              <p className="text-xs text-muted-foreground font-medium">Balance</p>
+              <p className="font-bold text-lg text-primary">
                 ₹{activeUser.balance.toLocaleString('en-IN')}
               </p>
             </div>
           </div>
 
           {/* Phase indicator */}
-          <div className="flex justify-center">
-            <Badge variant={phaseConfig[phase].variant}>
+          <div className="flex justify-center pt-2">
+            <Badge variant={phaseConfig[phase].variant} className="px-4 py-2 text-xs font-semibold">
               {phaseConfig[phase].label}
             </Badge>
           </div>
 
           {/* Error message */}
           {errorMsg && (
-            <p className="text-xs text-center text-red-500">{errorMsg}</p>
+            <div className="p-3 rounded-lg bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 dark:border-destructive/50">
+              <p className="text-xs text-destructive font-medium">{errorMsg}</p>
+            </div>
           )}
 
           {/* Mic button — onPointerDown/Up works on both mobile and desktop */}
-          <div className="flex flex-col items-center gap-2 py-4">
+          <div className="flex flex-col items-center gap-3 pb-4 pt-2">
             <Button
-              size="lg"
               variant={phase === 'listening' ? 'destructive' : 'default'}
-              className="w-20 h-20 rounded-full text-2xl select-none"
+              className={`w-24 h-24 rounded-full select-none shadow-lg font-bold text-base transition-all duration-200 ${
+                phase === 'listening' ? 'ring-4 ring-destructive/50 animate-pulse' : 'hover:shadow-xl'
+              } ${phase === 'thinking' || phase === 'speaking' ? 'opacity-60' : ''}`}
               onPointerDown={handleMicDown}
               onPointerUp={handleMicUp}
               onPointerLeave={handleMicUp}
               disabled={phase === 'thinking' || phase === 'speaking'}
             >
-              {phase === 'listening' ? '⏹' : '🎙'}
+              {phase === 'listening' ? <Pause className='size-10' /> : <Mic className='size-10' />}
             </Button>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground font-medium h-4">
               {phase === 'idle' ? 'Hold while speaking' : ''}
             </p>
           </div>
 
           {/* Transcript bubble */}
           {transcript && (
-            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950">
-              <p className="text-xs text-muted-foreground mb-1">You said</p>
-              <p className="text-sm">{transcript}</p>
+            <div className="p-4 rounded-xl bg-secondary/10 dark:bg-secondary/20 border border-secondary/30 dark:border-secondary/50 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-xs text-secondary font-semibold mb-2">You said</p>
+              <p className="text-sm text-foreground leading-relaxed">{transcript}</p>
             </div>
           )}
 
           {/* Bot reply bubble */}
           {botReply && (
-            <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950">
-              <p className="text-xs text-muted-foreground mb-1">ICICI assistant</p>
-              <p className="text-sm">{botReply}</p>
+            <div className="p-4 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary/50 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-xs text-primary font-semibold mb-2">🤖 ICICI Assistant</p>
+              <p className="text-sm text-foreground leading-relaxed">{botReply}</p>
             </div>
           )}
 
           {/* Transfer history */}
           {transfers.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-medium">
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-bold uppercase tracking-wide">
                 Recent transfers
               </p>
               {transfers.map((t) => {
@@ -267,20 +272,22 @@ export default function Home() {
                 return (
                   <div
                     key={t.id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-muted text-sm"
+                    className={`flex items-center justify-between p-3 rounded-xl text-sm border transition-all duration-200 ${
+                      isSender
+                        ? 'bg-destructive/10 dark:bg-destructive/20 border-destructive/30 dark:border-destructive/50'
+                        : 'bg-chart-4/10 dark:bg-chart-4/20 border-chart-4/30 dark:border-chart-4/50'
+                    }`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
-                          isSender
-                            ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
-                            : 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground ${
+                          isSender ? 'bg-destructive' : 'bg-chart-4'
                         }`}
                       >
                         {other?.initials ?? '??'}
                       </div>
                       <div>
-                        <p className="text-xs font-medium">
+                        <p className="text-xs font-semibold text-foreground">
                           {isSender
                             ? `To ${other?.name ?? 'Unknown'}`
                             : `From ${other?.name ?? 'Unknown'}`}
@@ -296,8 +303,8 @@ export default function Home() {
                       </div>
                     </div>
                     <span
-                      className={`font-semibold text-xs ${
-                        isSender ? 'text-red-600' : 'text-green-600'
+                      className={`font-bold text-sm ${
+                        isSender ? 'text-destructive' : 'text-chart-4'
                       }`}
                     >
                       {isSender ? '−' : '+'}₹
@@ -310,6 +317,8 @@ export default function Home() {
           )}
         </CardContent>
       </Card>
+
+      <SupportBot />
     </main>
   )
 }

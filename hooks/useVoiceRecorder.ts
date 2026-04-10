@@ -21,19 +21,38 @@ export function useVoiceRecorder() {
   const [isRecording, setIsRecording] = useState(false)
 
   const startRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    mimeType.current = getSupportedMimeType()
-    mediaRecorder.current = new MediaRecorder(
-      stream,
-      mimeType.current ? { mimeType: mimeType.current } : undefined
-    )
-    chunks.current = []
-    startTime.current = Date.now()
-    mediaRecorder.current.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.current.push(e.data)
+    try {
+      // Check if mediaDevices API is available
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('Microphone access is not available on this device. Please ensure you are using a modern browser and have granted microphone permissions.')
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mimeType.current = getSupportedMimeType()
+      mediaRecorder.current = new MediaRecorder(
+        stream,
+        mimeType.current ? { mimeType: mimeType.current } : undefined
+      )
+      chunks.current = []
+      startTime.current = Date.now()
+      mediaRecorder.current.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.current.push(e.data)
+      }
+      mediaRecorder.current.start()
+      setIsRecording(true)
+    } catch (err) {
+      if (err instanceof DOMException) {
+        if (err.name === 'NotAllowedError') {
+          throw new Error('Microphone permission denied. Please allow access in your browser settings.')
+        } else if (err.name === 'NotFoundError') {
+          throw new Error('No microphone found on this device.')
+        }
+      }
+      if (err instanceof Error) {
+        throw err
+      }
+      throw new Error('Failed to access microphone. Please try again.')
     }
-    mediaRecorder.current.start()
-    setIsRecording(true)
   }
 
   const stopRecording = (): Promise<Blob | null> => {
@@ -49,14 +68,21 @@ export function useVoiceRecorder() {
         return
       }
 
-      mediaRecorder.current!.onstop = () => {
+      // Guard: ensure mediaRecorder exists before accessing
+      if (!mediaRecorder.current) {
+        setIsRecording(false)
+        resolve(null)
+        return
+      }
+
+      mediaRecorder.current.onstop = () => {
         const blob = new Blob(chunks.current, {
           type: mimeType.current || 'audio/webm',
         })
         mediaRecorder.current?.stream.getTracks().forEach((t) => t.stop())
         resolve(blob)
       }
-      mediaRecorder.current!.stop()
+      mediaRecorder.current.stop()
       setIsRecording(false)
     })
   }
